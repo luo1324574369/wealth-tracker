@@ -1,4 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+
+app.name = 'WealthTracker'
+
 import { ensureRuntimePaths } from './paths'
 import { startEmbeddedServer, stopEmbeddedServer } from './server'
 import { createMainWindow } from './window'
@@ -59,7 +62,8 @@ if (!gotSingleInstanceLock) {
     focusMainWindow()
   })
 
-  app.whenReady()
+  app
+    .whenReady()
     .then(async () => {
       registerIpcHandlers()
       await bootstrap()

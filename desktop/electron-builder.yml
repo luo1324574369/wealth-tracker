@@ -4,6 +4,7 @@ directories:
   output: release
 files:
   - dist/**
+  - assets/icon.png
   - package.json
 extraResources:
   - from: .stage/server
@@ -12,12 +13,15 @@ asar: true
 asarUnpack:
   - "**/*.node"
 mac:
+  icon: assets/icon.png
   target:
     - dmg
 win:
+  icon: assets/icon.ico
   target:
     - nsis
 linux:
+  icon: assets/icon.png
   target:
     - AppImage
 nsis:

@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import { BrowserWindow, shell } from 'electron'
 
@@ -12,6 +13,7 @@ const isSameOrigin = (targetUrl: string, currentUrl: string) => {
 }
 
 export const createMainWindow = async (url: string) => {
+  const iconPath = path.join(__dirname, '..', 'assets', 'icon.png')
   const window = new BrowserWindow({
     width: 1440,
     height: 960,
@@ -19,6 +21,7 @@ export const createMainWindow = async (url: string) => {
     minHeight: 760,
     show: false,
     autoHideMenuBar: true,
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
