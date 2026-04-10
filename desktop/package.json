@@ -1,7 +1,7 @@
 {
   "name": "WealthTracker",
   "description": "Wealth Tracker Electron desktop shell.",
-  "version": "3.13.0",
+  "version": "4.0.0",
   "author": "nicejade",
   "private": true,
   "main": "dist/main.js",
