@@ -15,8 +15,6 @@ jobs:
             platform: mac
           - os: windows-latest
             platform: win
-          - os: ubuntu-latest
-            platform: linux
 
     runs-on: ${{ matrix.os }}
 
@@ -34,10 +32,6 @@ jobs:
 
       - name: Install dependencies
         run: yarn install
-
-      - name: Install ImageMagick (Linux)
-        if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
 
       - name: Install ImageMagick (Windows)
         if: matrix.platform == 'win'
