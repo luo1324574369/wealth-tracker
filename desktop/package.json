@@ -8,7 +8,7 @@
   "scripts": {
     "clean": "node ./scripts/clean.mjs",
     "dev": "npm run build && npx electron .",
-    "build": "npm run clean && npx tsc -p tsconfig.json",
+    "build": "npm run clean && tsc -p tsconfig.json",
     "prepare-icons": "node ./scripts/generate-icons.mjs",
     "prepare-server": "node ./scripts/prepare-server.mjs",
     "pack": "npm run prepare-icons && electron-builder --dir --config electron-builder.yml",
