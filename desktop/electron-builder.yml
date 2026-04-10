@@ -1,0 +1,26 @@
+appId: com.nicejade.wealth-tracker
+productName: Wealth Tracker
+directories:
+  output: release
+files:
+  - dist/**
+  - package.json
+extraResources:
+  - from: .stage/server
+    to: server
+asar: true
+asarUnpack:
+  - "**/*.node"
+mac:
+  target:
+    - dmg
+win:
+  target:
+    - nsis
+linux:
+  target:
+    - AppImage
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

@@ -6,13 +6,21 @@
   "private": true,
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "desktop"
   ],
   "scripts": {
-    "build:client": "lerna run build --scope=client",
-    "build:server": "lerna run build --scope=server",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
     "build": "yarn build:client && yarn build:server",
-    "start": "lerna run deploy --scope=server",
+    "build:web": "yarn build",
+    "desktop:dev": "yarn build:web && cd desktop && npm run dev",
+    "desktop:build": "yarn build:web && cd desktop && npm run build && npm run prepare-server",
+    "desktop:dist": "yarn desktop:build && cd desktop && npm run dist",
+    "desktop:dist:mac": "yarn desktop:build && cd desktop && npm run dist:mac",
+    "desktop:dist:win": "yarn desktop:build && cd desktop && npm run dist:win",
+    "desktop:dist:linux": "yarn desktop:build && cd desktop && npm run dist:linux",
+    "start": "cd server && npm run deploy",
     "stop": "pm2 stop wealth-tracker",
     "restart": "pm2 restart wealth-tracker",
     "logs": "pm2 logs wealth-tracker",

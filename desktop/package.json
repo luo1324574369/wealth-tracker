@@ -1,0 +1,24 @@
+{
+  "name": "desktop",
+  "description": "Wealth Tracker Electron desktop shell.",
+  "version": "3.13.0",
+  "author": "nicejade",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "clean": "node ./scripts/clean.mjs",
+    "dev": "npm run build && npx electron .",
+    "build": "npm run clean && npx tsc -p tsconfig.json",
+    "prepare-server": "node ./scripts/prepare-server.mjs",
+    "pack": "electron-builder --dir --config electron-builder.yml",
+    "dist": "electron-builder --config electron-builder.yml",
+    "dist:mac": "electron-builder --mac --config electron-builder.yml",
+    "dist:win": "electron-builder --win --config electron-builder.yml",
+    "dist:linux": "electron-builder --linux --config electron-builder.yml"
+  },
+  "devDependencies": {
+    "electron": "^35.1.3",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.3"
+  }
+}

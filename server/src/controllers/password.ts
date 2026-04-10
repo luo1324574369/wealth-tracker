@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import Password, { hash, verify } from '../models/password'
 import { createSession, validateSession } from '../models/session'
+import { parseBooleanEnv } from '../helper/constant'
 
 /**
  * Detect whether the incoming request was made over HTTPS,
@@ -28,8 +29,8 @@ const buildSessionCookieOptions = (request: FastifyRequest) => {
 }
 
 export const checkPassword = async (request: FastifyRequest) => {
-  const canBeReset = process.env.CAN_BE_RESET === 'true'
-  const allowPassword = process.env.ALLOW_PASSWORD === 'true'
+  const canBeReset = parseBooleanEnv(process.env.CAN_BE_RESET, false)
+  const allowPassword = parseBooleanEnv(process.env.ALLOW_PASSWORD, false)
   const havePassword = !!(await Password.findOne({ where: {} }))
 
   if (!allowPassword) {

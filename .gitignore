@@ -18,6 +18,9 @@ server/public
 # Datebase
 server/dist
 server/data/*.sqlite
+desktop/dist
+desktop/release
+desktop/.stage
 
 # local env files
 .env.local

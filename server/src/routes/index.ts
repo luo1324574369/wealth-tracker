@@ -1,3 +1,4 @@
+import { parseBooleanEnv } from '../helper/constant'
 import assets from './assets'
 import records from './records'
 import advice from './advice'
@@ -9,7 +10,7 @@ import { Assets } from './../models/assets'
 import { Record } from './../models/records'
 
 export const reset = async (_, reply) => {
-  const canBeReset = process.env.CAN_BE_RESET || false
+  const canBeReset = parseBooleanEnv(process.env.CAN_BE_RESET, false)
   if (!canBeReset) {
     return reply.code(400).send({
       statusCode: 400,

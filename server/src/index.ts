@@ -1,38 +1,26 @@
 import fs from 'fs/promises'
 import path from 'path'
-import Fastify from 'fastify'
+import Fastify, { FastifyInstance } from 'fastify'
 import fastifyStatic from '@fastify/static'
 // Fix Bug: [fetch is not defined](Ubuntu16 Cannot Upgrade Node to v18.*)
 import 'isomorphic-fetch'
-import * as register from './register'
-import routes from './routes'
-import { sequelize } from './models/index'
-// Import models to ensure they are registered with Sequelize
-import './models/customCurrency'
-import './models/userSettings'
-import './models/assets'
-import './models/records'
-import './models/insights'
-import './models/password'
-import './models/session'
+import { Sequelize } from 'sequelize'
+import { applyRuntimeOptions, getRuntimeOptions, ServerRuntimeOptions } from './helper/runtime'
 
-const fastify = Fastify({ logger: true })
+let fastify: FastifyInstance | null = null
+let sequelize: Sequelize | null = null
+let serverAddress = ''
+let appPromise: Promise<FastifyInstance> | null = null
 
-const connect2sqlite = async () => {
-  try {
-    // 首先尝试正常同步；检查并添加 tags 列（如果不存在）；如果存在，则不添加；
-    await sequelize.sync()
-    await addTagsColumnToAssetsIfNotExists()
-    await addTagsColumnToRecordIfNotExists()
-
-    console.log('🎊 Database synced!')
-  } catch (err) {
-    console.error('Failed to sync database:', err)
-    throw err
-  }
+const ensureDatabaseDirectory = async (dbPath: string) => {
+  await fs.mkdir(path.dirname(dbPath), { recursive: true })
 }
 
 const addTagsColumnToAssetsIfNotExists = async () => {
+  if (!sequelize) {
+    return
+  }
+
   try {
     const [results] = await sequelize.query('PRAGMA table_info(assets)')
     const hasTagsColumn = results.some((row: any) => row.name === 'tags')
@@ -48,6 +36,10 @@ const addTagsColumnToAssetsIfNotExists = async () => {
 }
 
 const addTagsColumnToRecordIfNotExists = async () => {
+  if (!sequelize) {
+    return
+  }
+
   try {
     const [results] = await sequelize.query('PRAGMA table_info(record)')
     const hasTagsColumn = results.some((row: any) => row.name === 'tags')
@@ -62,20 +54,34 @@ const addTagsColumnToRecordIfNotExists = async () => {
   }
 }
 
-const setupStaticFiles = () => {
-  fastify.register(fastifyStatic, {
-    root: path.join(__dirname, '..', 'public'),
+const connectToSqlite = async () => {
+  if (!sequelize) {
+    throw new Error('Sequelize has not been initialized.')
+  }
+
+  try {
+    await ensureDatabaseDirectory(getRuntimeOptions().dbPath)
+    await sequelize.sync()
+    await addTagsColumnToAssetsIfNotExists()
+    await addTagsColumnToRecordIfNotExists()
+    console.log('🎊 Database synced!')
+  } catch (err) {
+    console.error('Failed to sync database:', err)
+    throw err
+  }
+}
+
+const setupStaticFiles = (app: FastifyInstance, publicDir: string) => {
+  app.register(fastifyStatic, {
+    root: publicDir,
     prefix: '',
   })
 }
 
-const setupNotFoundHandler = () => {
-  fastify.setNotFoundHandler(async (request, reply) => {
+const setupNotFoundHandler = (app: FastifyInstance, publicDir: string) => {
+  app.setNotFoundHandler(async (request, reply) => {
     if (!request.url.includes('/api/')) {
-      const indexHtmlContent = await fs.readFile(
-        path.join(__dirname, '..', 'public', 'index.html'),
-        'utf-8',
-      )
+      const indexHtmlContent = await fs.readFile(path.join(publicDir, 'index.html'), 'utf-8')
       reply.type('text/html').send(indexHtmlContent)
     } else {
       reply.code(404).send({ error: 'Oops , Page Not Found.' })
@@ -83,27 +89,101 @@ const setupNotFoundHandler = () => {
   })
 }
 
-const setupApiRoutes = () => {
-  routes.forEach((route: any) => fastify.route(route))
-}
+const loadServerModules = async () => {
+  const [
+    registerModule,
+    routesModule,
+    modelsModule,
+  ] = await Promise.all([
+    import('./register'),
+    import('./routes'),
+    import('./models'),
+    import('./models/customCurrency'),
+    import('./models/userSettings'),
+    import('./models/assets'),
+    import('./models/records'),
+    import('./models/insights'),
+    import('./models/password'),
+    import('./models/session'),
+  ])
 
-const start = async () => {
-  try {
-    await Promise.all([
-      connect2sqlite(),
-      register.default(fastify),
-      setupApiRoutes(),
-      setupStaticFiles(),
-      setupNotFoundHandler(),
-    ])
+  sequelize = modelsModule.sequelize
 
-    const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8888
-    const address = await fastify.listen({ port, host: '0.0.0.0' })
-    fastify.log.info(`server listening on ${address}`)
-  } catch (err) {
-    fastify.log.error(err)
-    process.exit(1)
+  return {
+    registerPlugins: registerModule.default,
+    routes: routesModule.default,
   }
 }
 
-start()
+export const createApp = async (options: ServerRuntimeOptions = {}) => {
+  if (fastify) {
+    return fastify
+  }
+
+  if (appPromise) {
+    return appPromise
+  }
+
+  appPromise = (async () => {
+    const runtimeOptions = applyRuntimeOptions(options)
+    const app = Fastify({ logger: true })
+    const { registerPlugins, routes } = await loadServerModules()
+
+    await connectToSqlite()
+    await registerPlugins(app)
+    routes.forEach((route: any) => app.route(route))
+    setupStaticFiles(app, runtimeOptions.publicDir)
+    setupNotFoundHandler(app, runtimeOptions.publicDir)
+
+    fastify = app
+    return app
+  })()
+
+  try {
+    return await appPromise
+  } catch (error) {
+    appPromise = null
+    throw error
+  }
+}
+
+export const startServer = async (options: ServerRuntimeOptions = {}) => {
+  const app = await createApp(options)
+  const runtimeOptions = getRuntimeOptions()
+
+  if (!app.server.listening) {
+    serverAddress = await app.listen({
+      host: runtimeOptions.host,
+      port: runtimeOptions.port,
+    })
+    app.log.info(`server listening on ${serverAddress}`)
+  }
+
+  return {
+    address: serverAddress,
+    app,
+    options: runtimeOptions,
+  }
+}
+
+export const stopServer = async () => {
+  if (fastify) {
+    await fastify.close()
+  }
+
+  if (sequelize) {
+    await sequelize.close()
+  }
+
+  fastify = null
+  sequelize = null
+  serverAddress = ''
+  appPromise = null
+}
+
+if (require.main === module) {
+  startServer().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}
