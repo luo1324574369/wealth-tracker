@@ -6,69 +6,97 @@ on:
       - main
 
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-latest
+            platform: linux
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install pnpm
-        run: npm install -g pnpm lerna
+        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build Client & Server
+      - name: Install ImageMagick (Linux)
+        if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Install ImageMagick (Windows)
+        if: matrix.platform == 'win'
+        run: choco install imagemagick -y
+
+      - name: Build web (client + server)
         run: npm run build
 
-      - name: Copy package.json to dist
-        run: cp server/package.json server/dist/
+      - name: Build desktop
+        run: npm run desktop:build
 
-      - name: Create script.sh
+      - name: Build desktop distribution
+        working-directory: desktop
+        run: npm run dist:${{ matrix.platform }}
+
+      - name: Collect distributable files
+        shell: bash
         run: |
-          echo "cd dist" > script.sh
-          echo "npm i" >> script.sh
-          echo "node index.js" >> script.sh
+          mkdir -p dist-output
+          cp desktop/release/*.dmg dist-output/ 2>/dev/null || true
+          cp desktop/release/*.exe dist-output/ 2>/dev/null || true
+          cp desktop/release/*.AppImage dist-output/ 2>/dev/null || true
+          ls -la dist-output/
 
-      - name: Create script.bat
-        run: |
-          echo cd dist > script.bat
-          echo npm i >> script.bat
-          echo node index.js >> script.bat
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: dist-output/*
+          if-no-files-found: error
 
-      - name: Package into a single ZIP
-        run: |
-          cd server
-          zip -r ../wealth-tracker.zip public dist
-          zip -j ../wealth-tracker.zip ../script.sh ../script.bat
+  release:
+    needs: build
+    runs-on: ubuntu-latest
 
-      # 🔑 获取 package.json 的 version
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Get Version from package.json
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List release files
+        run: ls -la artifacts/
+
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           tag_name: v${{ steps.get_version.outputs.version }}
-          release_name: 🎉 Release ${{ steps.get_version.outputs.version }} 🎉
+          name: "🎉 Release ${{ steps.get_version.outputs.version }} 🎉"
           draft: false
           prerelease: false
-
-      - name: Upload ZIP to Release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./wealth-tracker.zip
-          asset_name: wealth-tracker.zip
-          asset_content_type: application/zip
+          files: artifacts/*

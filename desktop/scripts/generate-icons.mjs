@@ -32,9 +32,20 @@ const ensureDirectory = async (targetPath) => {
   await fs.mkdir(targetPath, { recursive: true })
 }
 
+const hasSips = process.platform === 'darwin'
+
 const resizePng = async (sourcePath, targetPath, size) => {
   await ensureDirectory(path.dirname(targetPath))
-  await runCommand('sips', ['-z', String(size), String(size), sourcePath, '--out', targetPath])
+  if (hasSips) {
+    await runCommand('sips', ['-z', String(size), String(size), sourcePath, '--out', targetPath])
+  } else {
+    await runCommand('magick', [
+      sourcePath,
+      '-resize',
+      `${size}x${size}!`,
+      targetPath,
+    ])
+  }
 }
 
 const buildIco = async () => {
