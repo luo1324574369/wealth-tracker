@@ -75,6 +75,16 @@
 
 ## 如何使用？
 
+### 桌面应用（Electron）
+
+若希望**在本地完整使用「生财有迹」**（界面与后端服务一并随应用运行，数据保存在本机），可直接从 [GitHub Releases](https://github.com/nicejade/wealth-tracker/releases) 下载对应平台的安装包，安装后打开应用即可；无需单独部署服务器，适合日常在个人电脑上离线使用。
+
+**MacOS 说明**：当前安装包未做 Apple 公证/签名，首次安装后若系统阻止打开，可在终端执行以下命令移除隔离属性后再启动：
+
+```bash
+sudo xattr -cr /Applications/Wealth\ Tracker.app
+```
+
 ### 使用 [Docker](https://hub.docker.com/r/nicejade/wealth-tracker)
 
 **使用 [docker compose](https://docs.docker.com/compose/)**：
