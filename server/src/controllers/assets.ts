@@ -35,7 +35,13 @@ export const create = async (request, reply) => {
 
 export const get = async (_, reply) => {
   try {
-    const data = await Assets.findAll()
+    const data = await Assets.findAll({
+      order: [
+        ['sortOrder', 'ASC'],
+        ['created', 'ASC'],
+        ['datetime', 'ASC'],
+      ],
+    })
     return reply.send(data)
   } catch (error: any) {
     return reply.code(400).send({
