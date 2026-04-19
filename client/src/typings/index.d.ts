@@ -21,6 +21,9 @@ export interface AssetsItem {
   datetime: string
   note: string
   tags?: string
+  sortOrder?: number
+  created?: string
+  updated?: string
 }
 
 export interface Settings {

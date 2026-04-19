@@ -39,6 +39,10 @@ Assets.init(
       allowNull: true,
       defaultValue: '',
     },
+    sortOrder: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
     currency: {
       type: DataTypes.TEXT,
       allowNull: false,

@@ -35,6 +35,40 @@ const addTagsColumnToAssetsIfNotExists = async () => {
   }
 }
 
+const ensureSortOrderColumnOnAssets = async () => {
+  if (!sequelize) {
+    return
+  }
+
+  try {
+    const [results] = await sequelize.query('PRAGMA table_info(assets)')
+    const hasSortOrderColumn = results.some((row: any) => row.name === 'sortOrder')
+
+    if (!hasSortOrderColumn) {
+      console.log('Adding sortOrder column to assets table...')
+      await sequelize.query('ALTER TABLE assets ADD COLUMN sortOrder INTEGER')
+      console.log('✅ sortOrder column added successfully!')
+    }
+
+    const [assets] = await sequelize.query(
+      'SELECT type, "sortOrder", created, datetime, rowid FROM assets ORDER BY CASE WHEN "sortOrder" IS NULL THEN 1 ELSE 0 END, "sortOrder" ASC, created ASC, datetime ASC, rowid ASC',
+    )
+
+    for (const [index, asset] of (assets as any[]).entries()) {
+      if (asset.sortOrder !== index) {
+        await sequelize.query('UPDATE assets SET "sortOrder" = :sortOrder WHERE type = :type', {
+          replacements: {
+            sortOrder: index,
+            type: asset.type,
+          },
+        })
+      }
+    }
+  } catch (err) {
+    console.error('Error ensuring assets sortOrder column:', err)
+  }
+}
+
 const addTagsColumnToRecordIfNotExists = async () => {
   if (!sequelize) {
     return
@@ -63,6 +97,7 @@ const connectToSqlite = async () => {
     await ensureDatabaseDirectory(getRuntimeOptions().dbPath)
     await sequelize.sync()
     await addTagsColumnToAssetsIfNotExists()
+    await ensureSortOrderColumnOnAssets()
     await addTagsColumnToRecordIfNotExists()
     console.log('🎊 Database synced!')
   } catch (err) {

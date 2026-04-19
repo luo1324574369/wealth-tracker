@@ -16,6 +16,10 @@ export const updateAssets = (data) => {
   return $ajax.put(genApiPath('assets'), data)
 }
 
+export const reorderAssets = (items) => {
+  return $ajax.post(genApiPath('assets/reorder'), { items })
+}
+
 export const destroyAssets = (data) => {
   return $ajax.delete(genApiPath('assets'), data)
 }

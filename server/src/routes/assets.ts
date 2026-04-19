@@ -1,4 +1,4 @@
-import { create, get, update, destroy } from '../controllers/assets'
+import { create, get, update, destroy, reorder } from '../controllers/assets'
 
 export default [
   {
@@ -15,6 +15,11 @@ export default [
     method: 'PUT',
     url: '/api/assets',
     handler: update,
+  },
+  {
+    method: 'POST',
+    url: '/api/assets/reorder',
+    handler: reorder,
   },
   {
     method: 'DELETE',
