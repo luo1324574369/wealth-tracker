@@ -13,8 +13,15 @@
   import BindingChart from '../components/ChartWidget/BindingChart.svelte'
   import UpdateModal from '../components/Modal/Update.svelte'
   import SvgIcon from '../components/SvgIcon.svelte'
-  import { getAssets, destroyAssets, getRecords, resetDatabase } from '../helper/apis'
+  import {
+    destroyAssets,
+    getAssets,
+    getRecords,
+    reorderAssets,
+    resetDatabase,
+  } from '../helper/apis'
   import { ACTION_TYPES, DEFAULT_ACCOUNT_ITEM } from './../helper/constant'
+  import { sortAssetsForHomepage } from '../helper/assetOrder'
   import type { AssetsItem, RecordsItem } from '../typings'
   import { trackEvent } from '../helper/analytics'
   import {
@@ -26,6 +33,7 @@
   import { alert, exchangeRates, targetCurrencyCode } from '../stores'
 
   let rawAssetsArr = []
+  let tableAssetsArr = []
   let rawRecordsArr = []
   let convertedAssetsArr = []
   let convertedRecordsArr = []
@@ -60,6 +68,7 @@
     try {
       const results: Array<any> = await Promise.all([getAssets(), getRecords()])
       rawAssetsArr = results[0] as any[]
+      tableAssetsArr = sortAssetsForHomepage(results[0] as any[])
       const records: RecordsItem = results[1]
       rawRecordsArr = records.data
       updateRawRecords()
@@ -108,6 +117,22 @@
   const handleUpdateConfirm = () => {
     fetchDatabase()
     trackEvent('asset-update-confirm', { action_type: updateActionType })
+  }
+
+  const handleReorder = async (event) => {
+    const previousTableAssetsArr = tableAssetsArr
+    const nextTableAssetsArr = event.detail
+
+    tableAssetsArr = nextTableAssetsArr
+
+    try {
+      await reorderAssets(nextTableAssetsArr.map((item) => ({ type: item.type })))
+      trackEvent('asset-reorder')
+    } catch (error) {
+      tableAssetsArr = previousTableAssetsArr
+      alert.set(error.message)
+      console.error('Error reorder assets:', error)
+    }
   }
 
   const handleUpdateClose = () => {
@@ -182,9 +207,10 @@
 <div class="flex w-full flex-col items-center justify-center space-y-8">
   <OperatingArea on:add={handleAdd} />
   <TableWidget
-    options={rawAssetsArr}
+    options={tableAssetsArr}
     on:update={handleUpate}
     on:destroy={handleDestroy}
+    on:reorder={handleReorder}
     on:reset={handleReset} />
   {#if !isShowChart}
     <Skeleton type="all" />

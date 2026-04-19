@@ -1,5 +1,5 @@
 <script>
-  import { onMount, createEventDispatcher } from 'svelte'
+  import { createEventDispatcher } from 'svelte'
   import dayjs from 'dayjs'
   import {
     Button,
@@ -7,7 +7,6 @@
     Table,
     TableBody,
     TableBodyCell,
-    TableBodyRow,
     TableHead,
     TableHeadCell,
   } from 'flowbite-svelte'
@@ -15,6 +14,7 @@
   import Caption from '../Caption.svelte'
   import confetti from 'canvas-confetti'
   import { SUPPORTED_CURRENCIES } from './../../helper/constant'
+  import { moveAssetItem } from './../../helper/assetOrder'
   import { randomInRange, convertCurrency, getCurrencySymbol } from './../../helper/utils'
   import {
     exchangeRates,
@@ -38,6 +38,9 @@
   export let options = []
   let typeSortOrder = 'none'
   let sortedOptions = []
+  let draggingType = ''
+  let dragOverType = ''
+  const tableRowClass = 'border-b last:border-b-0 bg-white odd:bg-white even:bg-gray-50'
 
   const getTypeLabel = (item) => (item.alias || item.type || '').trim()
   const getSortBucket = (label) => {
@@ -116,6 +119,55 @@
     dispatch('destroy', elem)
   }
 
+  const canDragReorder = () => typeSortOrder === 'none'
+
+  const resetDragState = () => {
+    draggingType = ''
+    dragOverType = ''
+  }
+
+  const onDragStart = (event, item) => {
+    if (!canDragReorder()) {
+      event.preventDefault()
+      return
+    }
+
+    draggingType = item.type
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', item.type)
+  }
+
+  const onDragEnter = (item) => {
+    if (!canDragReorder() || draggingType === item.type) {
+      return
+    }
+
+    dragOverType = item.type
+  }
+
+  const onDragOver = (event, item) => {
+    if (!canDragReorder() || draggingType === item.type) {
+      return
+    }
+
+    event.preventDefault()
+    dragOverType = item.type
+  }
+
+  const onDrop = (item) => {
+    if (!canDragReorder()) {
+      resetDragState()
+      return
+    }
+
+    const reorderedAssets = moveAssetItem(options, draggingType, item.type)
+    resetDragState()
+
+    if (reorderedAssets !== options) {
+      dispatch('reorder', reorderedAssets)
+    }
+  }
+
   const onPersistClick = () => {
     fireConfetti({ spread: 30, startVelocity: 60, decay: 0.9 })
     fireConfetti({ spread: 60, startVelocity: 30, decay: 0.91 })
@@ -152,6 +204,9 @@
   </div>
   <Table hoverable={true} striped={true} class="divide-y last:border-b-0">
     <TableHead class="text-sm">
+      <TableHeadCell class="w-12">
+        <span class="sr-only">reorder</span>
+      </TableHeadCell>
       <TableHeadCell>
         <button
           type="button"
@@ -173,7 +228,24 @@
     </TableHead>
     <TableBody tableBodyClass="py-4">
       {#each sortedOptions as item (item.type)}
-        <TableBodyRow>
+        <tr
+          draggable={canDragReorder()}
+          class={`${tableRowClass} ${draggingType === item.type ? 'opacity-60' : ''} ${
+            dragOverType === item.type ? 'bg-yellow-50' : ''
+          }`}
+          on:dragstart={(event) => onDragStart(event, item)}
+          on:dragenter={() => onDragEnter(item)}
+          on:dragover={(event) => onDragOver(event, item)}
+          on:drop={() => onDrop(item)}
+          on:dragend={resetDragState}>
+          <TableBodyCell>
+            <span
+              class={`inline-flex select-none items-center text-lg leading-none ${
+                canDragReorder() ? 'cursor-grab text-slate-400' : 'cursor-not-allowed text-slate-300'
+              }`}>
+              ::
+            </span>
+          </TableBodyCell>
           <TableBodyCell>{item.alias || item.type}</TableBodyCell>
           <TableBodyCell>
             <span
@@ -206,9 +278,10 @@
               <span class="hover:text-brand text-mark">{$_('destroy')}</span>
             </Button>
           </TableBodyCell>
-        </TableBodyRow>
+        </tr>
       {/each}
-      <TableBodyRow>
+      <tr class={tableRowClass}>
+        <TableBodyCell>--</TableBodyCell>
         <TableBodyCell>
           <strong>{$_('total')}</strong>
         </TableBodyCell>
@@ -242,7 +315,7 @@
             <span class="text-mark hover:text-brand font-bold">{$_('reset')}</span>
           </Button>
         </TableBodyCell>
-      </TableBodyRow>
+      </tr>
     </TableBody>
   </Table>
 </Card>
