@@ -381,7 +381,7 @@ export async function fetchExchangeRates(base = 'CNY') {
       // 合并自定义货币汇率
       const ratesWithCustom = mergeCustomCurrencyRates(cachedRates, customCurrs, base)
       exchangeRates.set(ratesWithCustom)
-      return
+      return ratesWithCustom
     }
 
     const rateApiKey = localStorage.getItem(EXCHANGE_RATE_API_KEY)
@@ -414,12 +414,14 @@ export async function fetchExchangeRates(base = 'CNY') {
 
     setCachedRates(rates, base)
     exchangeRates.set(ratesWithCustom)
+    return ratesWithCustom
   } catch (error) {
     console.error('Failed to fetch exchange rates:', error)
     const rates = { ...DEFAULT_EXCHANGE_RATE.conversion_rates }
     const customCurrs = get(customCurrencies)
     const ratesWithCustom = mergeCustomCurrencyRates(rates, customCurrs, base)
     exchangeRates.set(ratesWithCustom)
+    return ratesWithCustom
   }
 }
 

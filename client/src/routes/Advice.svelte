@@ -12,11 +12,11 @@
     parse,
     sleep,
     updatePageMetaInfo,
-    getCurrencySymbol,
-    convertCurrency,
+    fetchExchangeRates,
   } from '../helper/utils'
   import { trackEvent } from '../helper/analytics'
   import { PROMPT_TEMPLATE, LANG_ARR } from '../helper/constant'
+  import { buildAdvicePromptData } from '../helper/advicePrompt'
   import { notice, alert } from '../stores'
   import { language } from '../stores'
   import { exchangeRates, targetCurrencyCode, customCurrencies } from '../stores'
@@ -27,8 +27,6 @@
   let rawAssetsArr: Array<any> = []
   let advice: string = ``
   let htmlBodyNode: HTMLBodyElement = null
-  let totalAssets: number = 0
-  let convertedTotalAssets: number = 0
   let prompt: string = ''
   let settings: Settings = {
     apiKey: '',
@@ -70,6 +68,7 @@
     }
 
     try {
+      await fetchExchangeRates()
       rawAssetsArr = (await getAssets()) as Array<any>
       updatePrompt()
     } catch (error) {
@@ -78,23 +77,16 @@
     }
   })
 
-  const updatePrompt = () => {
+  const updatePrompt = async () => {
     if (!rawAssetsArr.length) return
 
-    const assetsInfo = genAssetsInfo()
-    // Calculate converted total assets with fallback for missing exchange rates
-    convertedTotalAssets = rawAssetsArr.reduce((sum, item) => {
-      const convertedAmount =
-        $exchangeRates && Object.keys($exchangeRates).length > 0
-          ? convertCurrency(item.amount, item.currency, $targetCurrencyCode, $exchangeRates)
-          : item.currency === $targetCurrencyCode
-            ? item.amount
-            : 0
-      return sum + convertedAmount
-    }, 0)
-
-    const targetSymbol = getCurrencySymbol($targetCurrencyCode, $customCurrencies)
-    const formattedTotal = `${targetSymbol}${convertedTotalAssets.toLocaleString('en-US')}`
+    const { assetsInfo, formattedTotal } = await buildAdvicePromptData({
+      rawAssetsArr,
+      targetCurrency: $targetCurrencyCode,
+      exchangeRates: $exchangeRates,
+      customCurrencies: $customCurrencies,
+      fetchExchangeRates,
+    })
 
     prompt = formatTemplate(PROMPT_TEMPLATE, {
       language: findNameByValue(LANG_ARR, $language),
@@ -108,23 +100,6 @@
       const trimmedKey = key.trim()
       return data[trimmedKey] ?? match
     })
-  }
-
-  const genAssetsInfo = () => {
-    try {
-      return rawAssetsArr
-        .map((item) => {
-          totalAssets += item.amount
-          const { alias, amount, liquidity, risk, tags, currency } = item
-          const currencySymbol = getCurrencySymbol(currency || 'CNY', $customCurrencies)
-          const formattedAmount = `${currencySymbol}${amount.toLocaleString()}`
-          const tagsInfo = tags && tags.trim() ? `, Tags: ${tags}` : ''
-          return `- Account name: ${alias}, Amount: ${formattedAmount}, Liquidity: ${liquidity.toLowerCase()}, Risk: ${risk.toLowerCase()}${tagsInfo}`
-        })
-        .join('\n  ')
-    } catch (error) {
-      console.error('Error fetching assets:', error)
-    }
   }
 
   const findNameByValue = (sourceArr, value) => {

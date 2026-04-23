@@ -193,6 +193,32 @@
     const latestTime = item.updated || item.created || item.datetime
     return latestTime ? dayjs(latestTime).format('YYYY-MM-DD HH:mm') : '--'
   }
+
+  const getAmountDisplay = (item) => {
+    const originalAmount = `${getCurrencySymbol(item.currency, $customCurrencies)}${Number(item.amount).toLocaleString(
+      'en-US',
+    )}`
+
+    if (item.currency === $targetCurrencyCode) {
+      return originalAmount
+    }
+
+    if (!$exchangeRates?.[item.currency] || !$exchangeRates?.[$targetCurrencyCode]) {
+      return originalAmount
+    }
+
+    const convertedAmount = convertCurrency(
+      item.amount,
+      item.currency,
+      $targetCurrencyCode,
+      $exchangeRates,
+    )
+    const convertedDisplay = `${getCurrencySymbol($targetCurrencyCode, $customCurrencies)}${convertedAmount.toLocaleString(
+      'en-US',
+    )}`
+
+    return `${originalAmount} (${convertedDisplay})`
+  }
 </script>
 
 <Card
@@ -248,11 +274,7 @@
           </TableBodyCell>
           <TableBodyCell>{item.alias || item.type}</TableBodyCell>
           <TableBodyCell>
-            <span
-              class="text-brand border-brand me-1 inline-flex items-center rounded-sm border bg-yellow-50 px-1 py-0.5 text-xs font-medium">
-              {getCurrencySymbol(item.currency, $customCurrencies)}
-            </span>
-            {item.amount}
+            {getAmountDisplay(item)}
           </TableBodyCell>
           <TableBodyCell>{getCurrencyName(item.currency) + ($language ? '' : '')}</TableBodyCell>
           <TableBodyCell>{getLatestUpdatedTime(item)}</TableBodyCell>

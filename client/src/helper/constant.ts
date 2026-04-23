@@ -133,6 +133,7 @@ export const PROMPT_TEMPLATE = `As a professional financial advisor with extensi
 
 ## Asset Details
 - Total Assets: {total} 
+- All asset amounts below are expressed in the currently selected currency.
 
 - Current Asset Allocation:
   {status}
