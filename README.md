@@ -122,6 +122,47 @@ docker-compose up -d
 docker run -d -p 8888:8888 -v "$(pwd)/data:/app/data" nicejade/wealth-tracker:latest
 ```
 
+**如果您已经在服务器上运行了自定义镜像与容器**（例如镜像名为 `wealth-tracker:fork`，容器名为 `fund2`），可按如下方式更新部署：
+
+```bash
+git config --global --add safe.directory /www/wwwroot/fund2.xlxj1314.cn/src/wealth-tracker
+
+cd /www/wwwroot/fund2.xlxj1314.cn/src/wealth-tracker
+
+git fetch fork
+git checkout main
+git pull fork main
+
+pnpm i
+yarn build
+
+docker build -t wealth-tracker:fork .
+
+docker stop fund2
+docker rm fund2
+
+docker run -d \
+  --name fund2 \
+  -p 8888:8888 \
+  -v "$(pwd)/data:/app/data" \
+  --restart unless-stopped \
+  wealth-tracker:fork
+```
+
+如果之前容器启动时还额外配置了环境变量，例如：
+
+- `ALLOW_PASSWORD=true`
+- `CAN_BE_RESET=true`
+- `PEPPER_SECRET=...`
+
+请在重新执行 `docker run` 时一并补回对应的 `-e` 参数；如果不确定原容器的启动配置，建议先执行：
+
+```bash
+docker inspect fund2
+```
+
+重点检查 `Env`、`Mounts` 和 `PortBindings`，确保重新部署时不要遗漏原有配置。
+
 如果您在本地部署，只需打开网址——[http://localhost:8888](http://localhost:8888/) 即可访问。如果在服务器运行，可通过 http://[Server-IP]:8888 来访问，您也可以指定其他端口。
 
 您可以通过设置以下环境变量来配置应用的行为，详情参见[如何开启密码保护？](https://fine.niceshare.site/projects/wealth-tracker/#如何开启密码保护)：
