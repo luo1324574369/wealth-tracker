@@ -122,6 +122,31 @@ docker-compose up -d
 docker run -d -p 8888:8888 -v "$(pwd)/data:/app/data" nicejade/wealth-tracker:latest
 ```
 
+### 自定义镜像部署与更新
+
+如果您需要使用自定义镜像（例如 `wealth-tracker:fork`），可以按照以下步骤操作：
+
+#### 1. 本地构建和推送（在开发环境执行）
+
+```bash
+# 1. 拉取最新代码
+git pull
+
+# 2. 安装依赖
+pnpm i
+
+# 3. 构建项目（客户端 + 服务端）
+yarn build
+
+# 4. 构建 Docker 镜像
+docker build -t wealth-tracker:fork .
+
+# 5. 如果有镜像仓库，推送到仓库（可选）
+# docker push <your-registry>/wealth-tracker:fork
+```
+
+#### 2. 在部署服务器上更新（在部署容器环境执行）
+
 **如果您已经在服务器上运行了自定义镜像与容器**（例如镜像名为 `wealth-tracker:fork`，容器名为 `fund2`），可按如下方式更新部署：
 
 ```bash
