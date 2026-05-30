@@ -8,7 +8,7 @@
   import Footer from '../components/Footer.svelte'
   import OperatingArea from '../components/OperatingArea.svelte'
   import TableWidget from '../components/ChartWidget/TableWidget.svelte'
-  import AreaChart from '../components/ChartWidget/AreaChart.svelte'
+  import AreaChart from '../components/ChartWidget/AssetChangeTable.svelte'
   import DonutChart from '../components/ChartWidget/DonutChart.svelte'
   import BindingChart from '../components/ChartWidget/BindingChart.svelte'
   import UpdateModal from '../components/Modal/Update.svelte'
