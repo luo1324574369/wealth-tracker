@@ -30,7 +30,7 @@
     "stop": "pm2 stop wealth-tracker",
     "restart": "pm2 restart wealth-tracker",
     "logs": "pm2 logs wealth-tracker",
-    "docker": "yarn build && docker build -t wealth-tracker .",
+    "docker": "yarn build && docker build -t wealth-tracker:fork .",
     "prettier": "prettier --write \"{client,server}/**/**/*.{svelte,js,ts,jsx,tsx,css,scss}\""
   },
   "husky": {
